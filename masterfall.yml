@@ -1,0 +1,14 @@
+name: masterfall               # name of the environment
+channels:                 # where to pull packages from
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.13.3           # python version
+  - numpy
+  - pandas
+  - matplotlib
+  - astropy
+  - pip
+  - pip:
+      - lightkurve        # packages that need pip
+      - wotan
