@@ -34,7 +34,7 @@ def calc_RVrot(x_st_sky,y_st,istar_rad,veq,alpha_rot,beta_rot):
     The velocity vector in the inclined star frame is then
     
     .. math::    
-       v_\mathrm{x,sky star} &=  v \cos(\Phi)   \
+       v_\mathrm{x,sky star} &=  v \cos(\Phi)   \\
        v_\mathrm{y,sky star} &= -v \sin(\Phi) cos(i_\star)   \\
        v_\mathrm{z,sky star} &= -v \sin(\Phi) sin(i_\star) 
 
