@@ -4,11 +4,14 @@ channels:                 # where to pull packages from
   - conda-forge
 dependencies:
   - python=3.13.3           # python version
-  - numpy
-  - pandas
-  - matplotlib
-  - astropy
   - pip
-  - pip:
-      - lightkurve        # packages that need pip
-      - wotan
+  - pip:   # packages that need pip
+    - numpy
+    - pandas
+    - matplotlib
+    - astropy
+    - lightkurve       
+    - wotan
+    - ipykernel
+    - scipy
+      
