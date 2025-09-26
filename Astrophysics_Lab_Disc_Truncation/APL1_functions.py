@@ -14,7 +14,7 @@ def data_loader(file_path):
     Loads in a csv from a given path. The csv must be in the Databases folder to work.
     '''
     # Load CSV
-    df = pd.read_csv("../../Databases/" + str(file_path))
+    df = pd.read_csv("C:\\Users\\casey\\Downloads\\single_star_disks_pop 3\\single_star_disks_pop" + str(file_path), delim_whitespace=True, header=None)
     # Print dataframe to check
     # print(df.head())
     return df
