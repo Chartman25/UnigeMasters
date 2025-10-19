@@ -22,7 +22,7 @@ def calc_RVrot(x_st_sky,y_st,istar_rad,veq,alpha_rot,beta_rot):
        v &= \Omega R_\mathrm{\star} \\
          &= \Omega_\mathrm{eq} (1-\alpha_\mathrm{rot} y_\mathrm{lat}^2 - \beta_\mathrm{rot} y_\mathrm{lat}^4) R_\mathrm{\star} \\           
          &= v_\mathrm{eq} (1-\alpha_\mathrm{rot} y_\mathrm{lat}^2 - \beta_\mathrm{rot} y_\mathrm{lat}^4) 
-         
+         s
     The velocity vector in the star frame is defined as
 
     .. math::    
