@@ -873,7 +873,7 @@ def show_me_new_points(b, c, mu_indices, R_targets, M1, M2, *, deg_mu=3, re_idx=
     return newb, newc
 
 
-def truncation_radius(M1, M2, e, abin, b, c, R_targets, re_idx):
+def truncation_radius(M1, M2, e, abin, b, c, R_targets, re_idx, plotting=False):
     """
     M1: Mass of star 1
     M2: Mass of star 2
@@ -893,6 +893,34 @@ def truncation_radius(M1, M2, e, abin, b, c, R_targets, re_idx):
     R = [1e4, 1e5, 1e6]
 
     print(f"the truncation radius for a given mu = {mu(M1,M2)} and given Reynolds number Re = {R[re_idx]} is {trunc}")
+       
+    if plotting:    
+        # Create a blank canvas
+        fig, ax = plt.subplots(figsize=(60, 6))
+        ax.set_xlim(0, 10)
+        ax.set_ylim(0, 3)
+        ax.axis('off')  # Hide axes
+
+        # Write "CONGRATS" in a fun way
+        ax.text(5, 1.5, f"CONGRATS! You found a truncation radius of {trunc}", 
+                color='mediumspringgreen',
+                fontsize=100,
+                fontweight='bold',
+                ha='center', va='center',
+                family='sans-serif')
+
+        # Add a confetti-like scatter effect
+        np.random.seed(42)
+        x_confetti = np.random.uniform(0, 10, 400)
+        y_confetti = np.random.uniform(0, 3, 400)
+        colors = np.random.choice(['gold', 'deeppink', 'deepskyblue', 'lime', 'orange'], 400)
+        ax.scatter(x_confetti, y_confetti, s=40, c=colors, alpha=0.7)
+
+        # Optional: make it celebratory
+        ax.set_facecolor('black')
+
+        plt.tight_layout()
+        plt.show()                                                                          
     return trunc
 
 def mu(M1, M2):
