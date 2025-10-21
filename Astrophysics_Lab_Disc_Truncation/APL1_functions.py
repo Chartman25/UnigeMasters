@@ -607,8 +607,8 @@ def fit_b_c_mu_and_re(
         c_data.append(float(fit_re["new_c"][re_idx]))
 
     # Now fit polynomial in μ (degree deg_mu)
-    coeffs_b, cov_b = np.polyfit(mu_used, b_data, deg_mu, cov=True)
-    coeffs_c, cov_c = np.polyfit(mu_used, c_data, deg_mu, cov=True)
+    coeffs_b = np.polyfit(mu_used, b_data, deg_mu, cov=False)
+    coeffs_c = np.polyfit(mu_used, c_data, deg_mu, cov=False)
     p_b_mu = np.poly1d(coeffs_b)
     p_c_mu = np.poly1d(coeffs_c)
 
@@ -637,8 +637,7 @@ def fit_b_c_mu_and_re(
         "b_data": np.array(b_data, dtype=float),
         "c_data": np.array(c_data, dtype=float),
         "coeffs_b": coeffs_b, "coeffs_c": coeffs_c,
-        "poly_b": p_b_mu, "poly_c": p_c_mu,
-        "cov_b": cov_b, "cov_c": cov_c
+        "poly_b": p_b_mu, "poly_c": p_c_mu
     }
 
 
