@@ -542,6 +542,11 @@ def M2_vary(M1, mu_vals):
         
     return Mus
 
+def M2_vary_q(M1, q_vals):
+    Qs = []
+    for ii in range(len(q_vals)):
+        Qs.append(q_vals[ii] * M1)   # M2 = q * M1
+    return Qs
 
 
 
