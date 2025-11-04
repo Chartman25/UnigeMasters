@@ -12,14 +12,19 @@ sys.path.append(code_dir) # Add directory above us to the path
 
 
 
-def data_loader(file_path):
+def data_loader(file_path, first_part=True):
     '''
     Loads in a csv from a given path. The csv must be in the Databases folder to work.
     '''
-    # Load CSV
-    df = pd.read_csv("C:\\Users\\casey\\Downloads\\single_star_disks_pop 3\\single_star_disks_pop" + str(file_path), delim_whitespace=True, header=None)
-    # Print dataframe to check
-    # print(df.head())
+    if first_part == True:
+        
+        # Load CSV
+        df = pd.read_csv("C:\\Users\\casey\\Downloads\\single_star_disks_pop 3\\single_star_disks_pop" + str(file_path), delim_whitespace=True, header=None)
+        # Print dataframe to check
+        # print(df.head())
+    elif first_part == False:
+        df = pd.read_csv("C:\\Users\\casey\\Downloads\\setB\\setB" + str(file_path), delim_whitespace=True, header=None)
+        
     return df
 
 def make_pts(b, c, mu_indices):  
@@ -625,3 +630,145 @@ def make_corner_for_truncation(
 
     plt.show()
     return {"data": data, "fig_prim": fig_prim, "fig_sec": fig_sec}
+
+
+
+def load_series(
+    embryo=None,
+    abin_value=None,
+    migration_type=None,
+    *,
+    vary="abin",                      # one of: 'abin', 'embryo', 'migration'
+    embryos_list=None,
+    abin_list=None,
+    migration_list=None,
+    first_part=False,
+    loader=None,                      # defaults to AC.data_loader if not given
+):
+    """
+    Load tracks and return arrays of time, masses, and mean distance while varying one parameter.
+
+    Parameters
+    ----------
+    embryo : int | None
+        Fixed embryo semi-major axis (AU) when vary != 'embryo'.
+    abin_value : int | None
+        Fixed binary separation (AU) when vary != 'abin'.
+    migration_type : str | None
+        Fixed migration mode ('migration' or 'insitu') when vary != 'migration'.
+    vary : {'abin','embryo','migration'}
+        Which parameter to sweep over.
+    embryos_list, abin_list, migration_list : list | None
+        Optional custom lists for the sweep. Defaults to the globals above.
+    first_part : bool
+        Passed through to the loader.
+    loader : callable
+        A function like AC.data_loader(path, first_part=...). If None, uses AC.data_loader.
+
+    Returns
+    -------
+    result : dict
+        {
+          'vary': <str>,
+          'values': <list>,                # the swept values (e.g., list of abin or embryos or migration)
+          'time': <list>,
+          'core_mass': <list>,
+          'env_mass': <list>,
+          'tot_mass': <list>,
+          'mean_distance': <list>,
+          'paths': <list>                  # the file paths used (same length as 'values')
+        }
+        
+    Items in results can be changed to add in more columns from the dataframes when needed
+    """
+    # defaults
+    
+    embryos = [1, 3, 5, 10, 20]
+    abin = [50, 75, 100, 300]
+    migration = ["migration", "insitu"]
+    
+    if embryos_list is None: embryos_list = embryos
+    if abin_list is None: abin_list = abin
+    if migration_list is None: migration_list = migration
+    if loader is None:
+        # assume AC.data_loader is available in your environment
+        loader = data_loader
+        
+    # --- Build paths dictionary internally ---
+    paths = {}
+    for mig in migration_list:
+        paths[mig] = {}
+        for a in abin_list:
+            paths[mig][a] = {}
+            for e in embryos_list:
+                path = (
+                    f"\\1embryo@{e}au_0.1Mdisk_0.01fpg_0.01fopacity_alpha1e-3_kanag"
+                    f"\\abin{a}au_{mig}\\tracks_001.outputdat"
+                )
+                paths[mig][a][e] = path
+
+    # decide sweep axis
+    if vary == "abin":
+        if embryo is None or migration_type is None:
+            raise ValueError("When vary='abin', you must provide embryo and migration_type.")
+        sweep_values = abin_list
+        make_path = lambda val: paths[migration_type][val][embryo]
+        label = "abin"
+    elif vary == "embryo":
+        if abin_value is None or migration_type is None:
+            raise ValueError("When vary='embryo', you must provide abin_value and migration_type.")
+        sweep_values = embryos_list
+        make_path = lambda val: paths[migration_type][abin_value][val]
+        label = "embryo"
+    elif vary == "migration":
+        if embryo is None or abin_value is None:
+            raise ValueError("When vary='migration', you must provide embryo and abin_value.")
+        sweep_values = migration_list
+        make_path = lambda val: paths[val][abin_value][embryo]
+        label = "migration"
+    else:
+        raise ValueError("vary must be one of: 'abin', 'embryo', 'migration'.")
+
+    # containers mirroring your naming and column choices
+    time_arr = []
+    core_mass_arr = []
+    env_mass_arr = []
+    tot_mass_arr = []
+    mean_distance_arr = []
+    used_paths = []
+
+    for val in sweep_values:
+        p = make_path(val)
+        try:
+            df = loader(p, first_part=first_part)
+        except Exception as e:
+            # if a file is missing or loader fails, append None so lengths stay aligned
+            df = None
+
+        used_paths.append(p)
+
+        if df is None:
+            time_arr.append(None)
+            core_mass_arr.append(None)
+            env_mass_arr.append(None)
+            tot_mass_arr.append(None)
+            mean_distance_arr.append(None)
+        else:
+            # follow your exact indexing:
+            # time -> [1], core -> [2], env -> [3], tot -> [4], mean distance -> [28]
+            time_arr.append(df[1])
+            core_mass_arr.append(df[2])
+            env_mass_arr.append(df[3])
+            tot_mass_arr.append(df[4])
+            mean_distance_arr.append(df[28])
+
+    return {
+        "vary": label,
+        "values": sweep_values,
+        "time": time_arr,
+        "core_mass": core_mass_arr,
+        "env_mass": env_mass_arr,
+        "tot_mass": tot_mass_arr,
+        "mean_distance": mean_distance_arr,
+        "paths": used_paths,
+    }
