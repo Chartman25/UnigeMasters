@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from scipy.optimize import curve_fit
 import itertools
 import corner
+from typing import Iterable, Dict, List, Any
 import sys
 import os
 code_dir = os.path.abspath(os.path.join(os.getcwd(), '..')) # Get directory above us
@@ -19,11 +21,11 @@ def data_loader(file_path, first_part=True):
     if first_part == True:
         
         # Load CSV
-        df = pd.read_csv("C:\\Users\\casey\\Downloads\\single_star_disks_pop 3\\single_star_disks_pop" + str(file_path), delim_whitespace=True, header=None)
+        df = pd.read_csv("C:\\Users\\casey\\Downloads\\single_star_disks_pop 3\\single_star_disks_pop" + str(file_path), sep=r"\s+", header=None, engine="python")
         # Print dataframe to check
         # print(df.head())
     elif first_part == False:
-        df = pd.read_csv("C:\\Users\\casey\\Downloads\\setB\\setB" + str(file_path), delim_whitespace=True, header=None)
+        df = pd.read_csv("C:\\Users\\casey\\Downloads\\setB\\setB" + str(file_path),  sep=r"\s+", header=None, engine="python")
         
     return df
 
@@ -633,142 +635,182 @@ def make_corner_for_truncation(
 
 
 
-def load_series(
-    embryo=None,
-    abin_value=None,
-    migration_type=None,
-    *,
-    vary="abin",                      # one of: 'abin', 'embryo', 'migration'
-    embryos_list=None,
-    abin_list=None,
-    migration_list=None,
-    first_part=False,
-    loader=None,                      # defaults to AC.data_loader if not given
-):
+def build_series(paths: Dict[str, Any],
+                 AC, colors_prim, colors_second,
+                 migration_type: str,        # "migration" or "insitu"
+                 abin_values: Iterable,       # e.g., list/array of abin
+                 embryo: int,                 # e.g., 10
+                 cols: Dict[str, int] = None,  # override indices if needed
+                Plotting=False) -> Dict[str, List[Any]]:
     """
-    Load tracks and return arrays of time, masses, and mean distance while varying one parameter.
-
-    Parameters
-    ----------
-    embryo : int | None
-        Fixed embryo semi-major axis (AU) when vary != 'embryo'.
-    abin_value : int | None
-        Fixed binary separation (AU) when vary != 'abin'.
-    migration_type : str | None
-        Fixed migration mode ('migration' or 'insitu') when vary != 'migration'.
-    vary : {'abin','embryo','migration'}
-        Which parameter to sweep over.
-    embryos_list, abin_list, migration_list : list | None
-        Optional custom lists for the sweep. Defaults to the globals above.
-    first_part : bool
-        Passed through to the loader.
-    loader : callable
-        A function like AC.data_loader(path, first_part=...). If None, uses AC.data_loader.
-
-    Returns
-    -------
-    result : dict
-        {
-          'vary': <str>,
-          'values': <list>,                # the swept values (e.g., list of abin or embryos or migration)
-          'time': <list>,
-          'core_mass': <list>,
-          'env_mass': <list>,
-          'tot_mass': <list>,
-          'mean_distance': <list>,
-          'paths': <list>                  # the file paths used (same length as 'values')
+    Load runs across abin for a given migration_type and embryo distance,
+    and return lists for the key series.
+    """
+    if cols is None:
+        cols = {
+            "time": 1,
+            "core_mass": 2,
+            "env_mass": 3,
+            "tot_mass": 4,
+            "mean_distance": 28,
+            "pebble_flux": 124,
         }
+
+    dfs: List[Any] = []
+    for a in abin_values:
+        df = AC.data_loader(paths[migration_type][a][embryo], first_part=False)
+        dfs.append(df)
         
-    Items in results can be changed to add in more columns from the dataframes when needed
-    """
-    # defaults
-    
-    embryos = [1, 3, 5, 10, 20]
-    abin = [50, 75, 100, 300]
-    migration = ["migration", "insitu"]
-    
-    if embryos_list is None: embryos_list = embryos
-    if abin_list is None: abin_list = abin
-    if migration_list is None: migration_list = migration
-    if loader is None:
-        # assume AC.data_loader is available in your environment
-        loader = data_loader
-        
-    # --- Build paths dictionary internally ---
-    paths = {}
-    for mig in migration_list:
-        paths[mig] = {}
-        for a in abin_list:
-            paths[mig][a] = {}
-            for e in embryos_list:
-                path = (
-                    f"\\1embryo@{e}au_0.1Mdisk_0.01fpg_0.01fopacity_alpha1e-3_kanag"
-                    f"\\abin{a}au_{mig}\\tracks_001.outputdat"
-                )
-                paths[mig][a][e] = path
+    dfsingle = AC.data_loader(f"\\1embryo@{embryo}au_0.1Mdisk_0.01fpg_0.01fopacity_alpha1e-3_kanag\\single_star_{migration_type}\\tracks_001.outputdat", first_part=False)    
 
-    # decide sweep axis
-    if vary == "abin":
-        if embryo is None or migration_type is None:
-            raise ValueError("When vary='abin', you must provide embryo and migration_type.")
-        sweep_values = abin_list
-        make_path = lambda val: paths[migration_type][val][embryo]
-        label = "abin"
-    elif vary == "embryo":
-        if abin_value is None or migration_type is None:
-            raise ValueError("When vary='embryo', you must provide abin_value and migration_type.")
-        sweep_values = embryos_list
-        make_path = lambda val: paths[migration_type][abin_value][val]
-        label = "embryo"
-    elif vary == "migration":
-        if embryo is None or abin_value is None:
-            raise ValueError("When vary='migration', you must provide embryo and abin_value.")
-        sweep_values = migration_list
-        make_path = lambda val: paths[val][abin_value][embryo]
-        label = "migration"
-    else:
-        raise ValueError("vary must be one of: 'abin', 'embryo', 'migration'.")
-
-    # containers mirroring your naming and column choices
-    time_arr = []
-    core_mass_arr = []
-    env_mass_arr = []
-    tot_mass_arr = []
-    mean_distance_arr = []
-    used_paths = []
-
-    for val in sweep_values:
-        p = make_path(val)
-        try:
-            df = loader(p, first_part=first_part)
-        except Exception as e:
-            # if a file is missing or loader fails, append None so lengths stay aligned
-            df = None
-
-        used_paths.append(p)
-
-        if df is None:
-            time_arr.append(None)
-            core_mass_arr.append(None)
-            env_mass_arr.append(None)
-            tot_mass_arr.append(None)
-            mean_distance_arr.append(None)
-        else:
-            # follow your exact indexing:
-            # time -> [1], core -> [2], env -> [3], tot -> [4], mean distance -> [28]
-            time_arr.append(df[1])
-            core_mass_arr.append(df[2])
-            env_mass_arr.append(df[3])
-            tot_mass_arr.append(df[4])
-            mean_distance_arr.append(df[28])
-
-    return {
-        "vary": label,
-        "values": sweep_values,
-        "time": time_arr,
-        "core_mass": core_mass_arr,
-        "env_mass": env_mass_arr,
-        "tot_mass": tot_mass_arr,
-        "mean_distance": mean_distance_arr,
-        "paths": used_paths,
+    # Build output dict using the chosen column indices
+    out = {
+        "dfs": dfs,
+        "time":          [df[cols["time"]]          for df in dfs],
+        "core_mass":     [df[cols["core_mass"]]     for df in dfs],
+        "env_mass":      [df[cols["env_mass"]]      for df in dfs],
+        "tot_mass":      [df[cols["tot_mass"]]      for df in dfs],
+        "mean_distance": [df[cols["mean_distance"]] for df in dfs],
+        "pebble_flux":   [df[cols["pebble_flux"]]   for df in dfs],
     }
+    
+    
+    if Plotting==True:
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.scatter(out["time"][ii], out["tot_mass"][ii], s=1, label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+        plt.scatter(dfsingle[1], dfsingle[4], color='black', s=1, label='single_star')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Total Mass ($M_{\oplus}$)")
+        plt.legend()
+        plt.title(f'Total Mass vs Time for {migration_type} Embryos at {embryo} AU')
+
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.scatter(out["time"][ii], out["env_mass"][ii], s=1, label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+        plt.scatter(dfsingle[1], dfsingle[3], color='black', s=1,  label='single_star')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Envelope Mass ($M_{\oplus}$)")
+        plt.legend()
+        plt.title(f'Envelope Mass vs Time for {migration_type} Embryos at {embryo} AU')
+
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.scatter(out["time"][ii], out["core_mass"][ii], s=1, label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+        plt.scatter(dfsingle[1], dfsingle[2], color='black',  s=1, label='single_star')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Core Mass ($M_{\oplus}$)")
+        plt.legend()
+        plt.title(f'Core Mass vs Time for {migration_type} Embryos at {embryo} AU')
+
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.scatter(out["time"][ii], out["mean_distance"][ii], s=1, label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+        plt.scatter(dfsingle[1], dfsingle[28], color='black',  s=1, label='single_star')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel("Mean Distance (AU)")
+        plt.legend()
+        plt.title(f'Mean Distance vs Time for {migration_type} Embryos at {embryo} AU')
+
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.scatter(out["time"][ii], out["pebble_flux"][ii], s=1, label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+        plt.scatter(dfsingle[1], dfsingle[124], color='black',  s=1, label='single_star')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Pebble Flux ($M_{\oplus}$/yr)")
+        plt.xlim(10e2, 10e6)
+        plt.legend()
+        plt.title(f'Pebble Flux vs Time for {migration_type} Embryos at {embryo} AU')
+        
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.plot(out["time"][ii], out["tot_mass"][ii], label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+            plt.plot(out["time"][ii], out["core_mass"][ii], linestyle='--', color=colors_second[ii])
+        plt.plot(dfsingle[1], dfsingle[4], color='black', label='single_star')
+        plt.plot(dfsingle[1], dfsingle[2], linestyle='--', color='dimgrey')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Total Mass ($M_{\oplus}$)")
+        plt.legend()
+        plt.title(f'Total Mass (and Core Mass) vs Time for {migration_type} Embryos at {embryo} AU')
+        
+        plt.subplots(figsize=(6, 4))
+        plt.xscale("log")
+        for ii in range(len(out["time"])):
+            plt.plot(out["time"][ii], out["tot_mass"][ii], label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
+            plt.plot(out["time"][ii], out["env_mass"][ii], linestyle='--', color=colors_second[ii])
+        plt.plot(dfsingle[1], dfsingle[4], color='black', label='single_star')
+        plt.plot(dfsingle[1], dfsingle[3], linestyle='--', color='dimgrey')
+        plt.xlabel("Time (yrs)")
+        plt.ylabel(r"Total Mass ($M_{\oplus}$)")
+        plt.legend()
+        plt.title(f'Total Mass (and Envelope Mass) vs Time for {migration_type} Embryos at {embryo} AU')
+
+
+        
+    return out
+
+
+def build_disk_series(AC,
+                      embryo,migration_type, system_type,                # file path passed to AC.data_loader
+                      chunk_size=3400,      # size of each equal piece
+                      Plotting=False,       # toggle plotting
+                      cmap=cm.viridis):     # colormap (same default you used)
+    """
+    chunk_size is always 3400 unless specified otherwise
+    embryo takes an integer as input
+    migration_type and system_type both take strings an inputs
+    """
+
+    # load
+    filepath = f"\\1embryo@{embryo}au_0.1Mdisk_0.01fpg_0.01fopacity_alpha1e-3_kanag\\{system_type}_{migration_type}\\structure_disk.outputdat" 
+    df = AC.data_loader(filepath, first_part=False)
+
+    # equal-sized chunks only (ignore remainder)
+    n_chunks = len(df) // chunk_size
+    chunks = [df[i*chunk_size:(i+1)*chunk_size]
+              for i in range(n_chunks)]
+
+    # extract columns using your indices/notation
+    disk_radii = []
+    gas_sigma = []
+    time = []
+    for ii in range(len(chunks)):
+        disk_radii.append(chunks[ii][1])
+        gas_sigma.append(chunks[ii][2])
+        time.append(chunks[ii][8].iloc[0])
+        
+
+    if Plotting:
+        colors = cmap(np.linspace(0, 1, len(chunks)))
+        norm   = plt.Normalize(vmin=min(time), vmax=max(time))   # normalize to time values
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        for ii, color in enumerate(colors):
+            ax.plot(disk_radii[ii], gas_sigma[ii], color=color)
+
+        ax.set_xlabel("Disk Radius (AU)")
+        ax.set_ylabel(r"Gas Surface Density ($g/cm^2$)")
+        ax.set_title(f"Gas Surface Density vs Radius of {system_type}_{migration_type} at {embryo} AU")
+
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax)
+        cbar.set_label("Time (yrs)")
+
+        # optional: make ticks match real time values
+        ticks = np.linspace(min(time), max(time), min(len(chunks), 8))
+        cbar.set_ticks(ticks)
+        cbar.ax.set_yticklabels([f"{t:.2e}" for t in ticks])  # scientific notation for readability
+
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.tight_layout()
+        plt.show()
+
+    return disk_radii, gas_sigma, chunks
