@@ -714,6 +714,7 @@ def build_series(paths: Dict[str, Any],
         plt.xlabel("Time (yrs)")
         plt.ylabel("Mean Distance (AU)")
         plt.legend()
+        plt.ylim(0, 1)
         plt.title(f'Mean Distance vs Time for {migration_type} Embryos at {embryo} AU')
 
         plt.subplots(figsize=(6, 4))
@@ -729,6 +730,7 @@ def build_series(paths: Dict[str, Any],
         
         plt.subplots(figsize=(6, 4))
         plt.xscale("log")
+        plt.yscale("log")
         for ii in range(len(out["time"])):
             plt.plot(out["time"][ii], out["tot_mass"][ii], label='Binary Separation ' + str(abin_values[ii]), color=colors_prim[ii])
             plt.plot(out["time"][ii], out["core_mass"][ii], linestyle='--', color=colors_second[ii])
@@ -736,7 +738,7 @@ def build_series(paths: Dict[str, Any],
         plt.plot(dfsingle[1], dfsingle[2], linestyle='--', color='dimgrey')
         plt.xlabel("Time (yrs)")
         plt.ylabel(r"Total Mass ($M_{\oplus}$)")
-        plt.legend()
+        # plt.legend()
         plt.title(f'Total Mass (and Core Mass) vs Time for {migration_type} Embryos at {embryo} AU')
         
         plt.subplots(figsize=(6, 4))
