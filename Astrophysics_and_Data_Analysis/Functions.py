@@ -29,17 +29,17 @@ def min_maxing(features, range=0):
     elif range == -1:
         return 2* (features - features.min()) / (features.max() - features.min()) -1
 
-def z(features):
+def z(features): 
      '''
     Normalizes the data contained in features via standarization
     '''
      return (features - features.mean()) / features.std()
  
-def scale_like_training(df, train_min, train_max):
+def scale_like_training(df, train_min, train_max): # Min Max normalizing using the training data sets 
     scaled = 2 * (df - train_min) / (train_max - train_min) - 1
     return scaled
 
-def F1(CM, label=0):
+def F1(CM, label=0): # Calculates F1 scores for each label
     if label==0:
         precision = CM[0][0]/ (CM[0][0] + CM[1][0] +CM[2][0])
         recall = CM[0][0] / (CM[0][0] + CM[0][1] +CM[0][2])
@@ -53,7 +53,7 @@ def F1(CM, label=0):
     return F1_score
 
 
-def Confusion(known_labels, predicted_labels):
+def Confusion(known_labels, predicted_labels): # Calculates the confusion matrix
     CM_00=0
     CM_11=0
     CM_22=0
@@ -64,23 +64,23 @@ def Confusion(known_labels, predicted_labels):
     CM_20=0
     CM_21=0
     for ii in range(len(predicted_labels)):
-        if known_labels.iloc[ii]==0 and predicted_labels[ii]==0:
+        if known_labels[ii]==0 and predicted_labels[ii]==0:
             CM_00 += 1 
-        elif known_labels.iloc[ii]==1 and predicted_labels[ii]==1:
+        elif known_labels[ii]==1 and predicted_labels[ii]==1:
             CM_11 += 1 
-        elif known_labels.iloc[ii]==2 and predicted_labels[ii]==2:
+        elif known_labels[ii]==2 and predicted_labels[ii]==2:
             CM_22 += 1 
-        elif known_labels.iloc[ii]==0 and predicted_labels[ii]==1:
+        elif known_labels[ii]==0 and predicted_labels[ii]==1:
             CM_01 += 1 
-        elif known_labels.iloc[ii]==0 and predicted_labels[ii]==2:
+        elif known_labels[ii]==0 and predicted_labels[ii]==2:
             CM_02 += 1 
-        elif known_labels.iloc[ii]==1 and predicted_labels[ii]==0:
+        elif known_labels[ii]==1 and predicted_labels[ii]==0:
             CM_10 += 1 
-        elif known_labels.iloc[ii]==1 and predicted_labels[ii]==2:
+        elif known_labels[ii]==1 and predicted_labels[ii]==2:
             CM_12 += 1 
-        elif known_labels.iloc[ii]==2 and predicted_labels[ii]==0:
+        elif known_labels[ii]==2 and predicted_labels[ii]==0:
             CM_20 += 1 
-        elif known_labels.iloc[ii]==2 and predicted_labels[ii]==1:
+        elif known_labels[ii]==2 and predicted_labels[ii]==1:
             CM_21 += 1 
         
         
@@ -90,6 +90,20 @@ def Confusion(known_labels, predicted_labels):
         
     return CM
 
-def Accuracy(known_labels, predicted_labels):
+def Accuracy(known_labels, predicted_labels): # Calculates the accuracy of the predictions
     accuracy = np.sum(predicted_labels==known_labels)/len(known_labels)
     return accuracy
+
+def ACMF1(known_labels, predicted_labels, CM, label=0): # Calculates the accuracy, confusion matrix, and F1 scores all in one
+    # Compute accuracy of predictions
+    accuracy = accuracy(known_labels,predicted_labels)
+    
+    # Compute confusion matrix
+    CoMa = Confusion(known_labels, predicted_labels)
+    
+    # Compute F1 scores
+    F1_score_0 = F1(CoMa, 0)
+    F1_score_1 = F1(CoMa, 1)
+    F1_score_2 = F1(CoMa, 2)
+    
+    return accuracy, CoMa, F1_score_0, F1_score_1, F1_score_2
