@@ -94,7 +94,7 @@ def Accuracy(known_labels, predicted_labels): # Calculates the accuracy of the p
     accuracy = np.sum(predicted_labels==known_labels)/len(known_labels)
     return accuracy
 
-def ACMF1(known_labels, predicted_labels, CM, label=0): # Calculates the accuracy, confusion matrix, and F1 scores all in one
+def ACMF1(known_labels, predicted_labels, label=0): # Calculates the accuracy, confusion matrix, and F1 scores all in one
     # Compute accuracy of predictions
     accuracy = accuracy(known_labels,predicted_labels)
     
