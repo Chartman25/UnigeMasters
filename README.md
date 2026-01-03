@@ -3,6 +3,7 @@ A github repository to store projects from my Masters courses and research at UN
 
 Stellar Distortions: Research project with Prof. Vincent Bourrier and Dr. Adrien Deline
 - Goal: Update ANTARESS to consider surface radial velocity curves of oblate spheroids with tidal bulging. Update ANTARESS to consider gravity darkening effects due to tidal bulging
+- Main code modifications done through ANTARESS GitLab (https://gitlab.unige.ch/spice_dune/antaress)
 
 Disc Truncation: Research project with Prof. Julia Venturini and Arianna Nigioni
 - Goal: Model circumstellar disk truncation for circumprimary and circumsecondary disks. See how planet Embryos evolve in circumprimary disks when varying parameters
