@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from matplotlib.colors import LogNorm
 from scipy.optimize import curve_fit
 import itertools
 import corner
@@ -785,7 +786,7 @@ def build_disk_series(AC,
     for ii in range(len(chunks)):
         disk_radii.append(chunks[ii][1])
         gas_sigma.append(chunks[ii][2])
-        time.append(chunks[ii][8].iloc[0])
+        time.append(chunks[ii][9].iloc[0])
         
 
     if Plotting:
@@ -798,7 +799,7 @@ def build_disk_series(AC,
 
         ax.set_xlabel("Disk Radius (AU)")
         ax.set_ylabel(r"Gas Surface Density ($g/cm^2$)")
-        ax.set_title(f"Gas Surface Density vs Radius of {system_type}_{migration_type} at {embryo} AU")
+        ax.set_title(f"Gas Surface Density vs Radius for {embryo} AU embryo")
 
         sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
@@ -816,3 +817,5 @@ def build_disk_series(AC,
         plt.show()
 
     return disk_radii, gas_sigma, chunks
+
+
