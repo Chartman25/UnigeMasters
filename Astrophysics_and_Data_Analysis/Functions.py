@@ -96,7 +96,7 @@ def Accuracy(known_labels, predicted_labels): # Calculates the accuracy of the p
 
 def ACMF1(known_labels, predicted_labels, label=0): # Calculates the accuracy, confusion matrix, and F1 scores all in one
     # Compute accuracy of predictions
-    accuracy = accuracy(known_labels,predicted_labels)
+    accuracy = Accuracy(known_labels,predicted_labels)
     
     # Compute confusion matrix
     CoMa = Confusion(known_labels, predicted_labels)
